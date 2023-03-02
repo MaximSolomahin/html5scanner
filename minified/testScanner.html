@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible"
+          content="IE=edge"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0"/>
+    <script src="html5-qrcode.min.js"></script>
+</head>
+<body>
+<div class="parent">
+    <div class="child">
+        <div id="reader"></div>
+        <div id="codes">
+
+        </div>
+    </div>
+    <div class="child">
+        <div id="results">
+
+        </div>
+    </div>
+</div>
+<script>
+    function onScanSuccess(decodedText, decodedResult) {
+        console.error(decodedResult)
+
+        let utf8Encode = new TextEncoder();
+        let barcodeBytes = [];
+        let barcodeByteList = utf8Encode.encode(decodedResult.decodedText);
+
+        for (let code of barcodeByteList) {
+            if (code === 'buffer') {
+                break;
+            }
+            barcodeBytes.push(code);
+        }
+        // handle the scanned code as you like, for example:
+        //console.log(`Code matched = ${decodedText}`, decodedResult);
+        const result = {
+            'BarcodeFormatString': decodedResult.result.format.formatName,
+            'BarcodeText': decodedResult.decodedText,
+            'barcodeBytes': barcodeBytes
+        };
+
+        const p = document.createElement("p"); // creat img object
+        p.innerText = result.BarcodeText;
+        document.getElementById('codes').appendChild(p)
+
+        parent.postMessage(JSON.stringify({
+            command: "scanResult",
+            data: {
+                code: result.BarcodeText,
+                info: result,
+            }
+        }), document.referrer);
+    }
+
+    function onScanFailure(error) {
+        // handle scan failure, usually better to ignore and keep scanning.
+        // for example:
+        //console.warn(`Code scan error = ${error}`);
+    }
+
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        {
+            fps: 2,
+            qrbox: {width: 250, height: 250},
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            },
+            rememberLastUsedCamera: true,
+            showTorchButtonIfSupported: true
+        },
+        /* verbose= */ false);
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+</script>
+</body>
+<style>
+    #reader {
+        width: 500px;
+    }
+
+    .parent {
+        display: flex;
+        justify-content: center;
+    }
+
+    .child {
+        width: 50%;
+        display: flex;
+        flex-direction: column;
+    }
+</style>
+</html>
