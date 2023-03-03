@@ -182,6 +182,8 @@ export interface Html5QrcodeCameraScanConfig {
      * aspectRatio, facingMode, frameRate, etc.
      */
     videoConstraints?: MediaTrackConstraints | undefined;
+
+    debugMode?: boolean | undefined;
 }
 
 /**
@@ -195,8 +197,10 @@ class InternalHtml5QrcodeConfig implements Html5QrcodeCameraScanConfig {
     public readonly qrbox: number | QrDimensions | QrDimensionFunction | undefined;
     public readonly aspectRatio: number | undefined;
     public readonly videoConstraints: MediaTrackConstraints | undefined;
+    public readonly debugMode: boolean | undefined;
 
     private logger: Logger;
+
 
     private constructor(
         config: Html5QrcodeCameraScanConfig | undefined,
@@ -214,6 +218,7 @@ class InternalHtml5QrcodeConfig implements Html5QrcodeCameraScanConfig {
             this.qrbox = config.qrbox;
             this.aspectRatio = config.aspectRatio;
             this.videoConstraints = config.videoConstraints;
+            this.debugMode = config.debugMode;
         }
     }
 
@@ -260,7 +265,7 @@ export class Html5Qrcode {
 
     private shouldScan: boolean;
 
-    private elementForTest: Element | null = document.getElementById('results');
+    private debugMode: boolean | null = null ;
 
     // Nullable elements
     // TODO(mebjas): Reduce the state-fulness of this mammoth class, by splitting
@@ -329,6 +334,7 @@ export class Html5Qrcode {
         this.foreverScanTimeout;
         this.shouldScan = true;
         this.stateManagerProxy = StateManagerFactory.create();
+        //this.debugMode = configObject?.debugMode;
     }
 
     //#region start()
@@ -1069,7 +1075,6 @@ export class Html5Qrcode {
             width: viewfinderWidth,
             height: viewfinderHeight
         };
-
         const qrRegion = shouldShadingBeApplied
             ? this.getShadedRegionBounds(viewfinderWidth, viewfinderHeight, qrDimensions)
             : defaultQrRegion;
@@ -1154,7 +1159,7 @@ export class Html5Qrcode {
      * Forever scanning method.
      */
     private async foreverScan(qrCodeSuccessCallback: QrcodeSuccessCallback,
-        qrCodeErrorCallback: QrcodeErrorCallback) {
+                              qrCodeErrorCallback: QrcodeErrorCallback) {
         if (!this.shouldScan) {
             // Stop scanning.
             return;
@@ -1192,6 +1197,7 @@ export class Html5Qrcode {
         //do not chaqnge this image, make a copy [...currentImage]
         const currentImage = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
 
+        this.showImageForTest('mainPicture');
 
         // Try scanning normal frame and in case of failure, scan
         // the inverted context if not explictly disabled.
@@ -1201,6 +1207,9 @@ export class Html5Qrcode {
             if (!result) {
                 //invert
                 this.invertImage();
+
+                this.showImageForTest('invertPicture');
+
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             }
             if (!result) {
@@ -1209,13 +1218,17 @@ export class Html5Qrcode {
 
                 this.resize(videoElement);
 
-                this.showImageForTest();
+                this.showImageForTest('resizePicture');
+
 
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             }
             if (!result) {
                 //invert resized context
                 this.invertImage();
+
+                this.showImageForTest("invertResizePicture");
+
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             }
         } catch(error) {
@@ -1254,11 +1267,35 @@ export class Html5Qrcode {
 
 
     //You should use showImageForTest for show picture in div with id 'results'
-    private showImageForTest() {
-        if (this!.elementForTest != null) {
-            this!.elementForTest.innerHTML = '';
-            this!.elementForTest.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+    private showImageForTest(variant: string) {
+
+        //TODO: Переделать на аходящую глобальную переменную
+        if (true) {
+            let mainContainer = document.getElementById('resultsMain');
+            let zoomContainer = document.getElementById('resultsZoom');
+            let invertContainer = document.getElementById('resultsInvert');
+            let zoomInvertContainer = document.getElementById('resultsZoomInvert');
+
+            switch (variant) {
+                case 'mainPicture':
+                    mainContainer!.innerHTML = '';
+                    mainContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                    break
+                case 'resizePicture':
+                    zoomContainer!.innerHTML = '';
+                    zoomContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                    break
+                case 'invertPicture':
+                    invertContainer!.innerHTML = '';
+                    invertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                    break
+                case 'invertResizePicture':
+                    zoomInvertContainer!.innerHTML = '';
+                    zoomInvertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                    break
+            }
         }
+
     }
 
     //Helper method for showImageForTest

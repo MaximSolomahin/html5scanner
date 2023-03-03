@@ -18,65 +18,76 @@
         </div>
     </div>
     <div class="child">
-        <div id="results">
-
+        <div id="resultsMain">
+            <p1>Обычный снимок</p1>
+        </div>
+        <div id="resultsZoom">
+            <p1>Zoom</p1>
+        </div>
+        <div id="resultsInvert">
+            <p1>Invert</p1>
+        </div>
+        <div id="resultsZoomInvert">
+            <p1>Zoom Invert</p1>
         </div>
     </div>
 </div>
 <script>
-    function onScanSuccess(decodedText, decodedResult) {
-        console.error(decodedResult)
+	function onScanSuccess(decodedText, decodedResult) {
+		console.error(decodedResult)
 
-        let utf8Encode = new TextEncoder();
-        let barcodeBytes = [];
-        let barcodeByteList = utf8Encode.encode(decodedResult.decodedText);
+		let utf8Encode = new TextEncoder();
+		let barcodeBytes = [];
+		let barcodeByteList = utf8Encode.encode(decodedResult.decodedText);
 
-        for (let code of barcodeByteList) {
-            if (code === 'buffer') {
-                break;
-            }
-            barcodeBytes.push(code);
-        }
-        // handle the scanned code as you like, for example:
-        //console.log(`Code matched = ${decodedText}`, decodedResult);
-        const result = {
-            'BarcodeFormatString': decodedResult.result.format.formatName,
-            'BarcodeText': decodedResult.decodedText,
-            'barcodeBytes': barcodeBytes
-        };
+		for (let code of barcodeByteList) {
+			if (code === 'buffer') {
+				break;
+			}
+			barcodeBytes.push(code);
+		}
+		// handle the scanned code as you like, for example:
+		//console.log(`Code matched = ${decodedText}`, decodedResult);
+		const result = {
+			'BarcodeFormatString': decodedResult.result.format.formatName,
+			'BarcodeText': decodedResult.decodedText,
+			'barcodeBytes': barcodeBytes
+		};
 
-        const p = document.createElement("p"); // creat img object
-        p.innerText = result.BarcodeText;
-        document.getElementById('codes').appendChild(p)
+		const p = document.createElement("p"); // creat img object
+		p.innerText = result.BarcodeText;
+		document.getElementById('codes').appendChild(p)
 
-        parent.postMessage(JSON.stringify({
-            command: "scanResult",
-            data: {
-                code: result.BarcodeText,
-                info: result,
-            }
-        }), document.referrer);
-    }
+		parent.postMessage(JSON.stringify({
+			command: "scanResult",
+			data: {
+				code: result.BarcodeText,
+				info: result,
+			}
+		}), document.referrer);
+	}
 
-    function onScanFailure(error) {
-        // handle scan failure, usually better to ignore and keep scanning.
-        // for example:
-        //console.warn(`Code scan error = ${error}`);
-    }
+	function onScanFailure(error) {
+		// handle scan failure, usually better to ignore and keep scanning.
+		// for example:
+		//console.warn(`Code scan error = ${error}`);
+	}
 
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
-        {
-            fps: 2,
-            qrbox: {width: 250, height: 250},
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            },
-            rememberLastUsedCamera: true,
-            showTorchButtonIfSupported: true
-        },
-        /* verbose= */ false);
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+	let html5QrcodeScanner = new Html5QrcodeScanner(
+		"reader",
+		{
+			fps: 2,
+			qrbox: {width: 250, height: 250},
+			experimentalFeatures: {
+				useBarCodeDetectorIfSupported: true
+			},
+			rememberLastUsedCamera: true,
+			showTorchButtonIfSupported: true,
+			showZoomSliderIfSupported: true,
+			debugMode: true
+		},
+		/* verbose= */ false);
+	html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 </script>
 </body>
 <style>
