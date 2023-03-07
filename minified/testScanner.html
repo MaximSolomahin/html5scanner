@@ -34,8 +34,6 @@
 </div>
 <script>
 	function onScanSuccess(decodedText, decodedResult) {
-		console.error(decodedResult)
-
 		let utf8Encode = new TextEncoder();
 		let barcodeBytes = [];
 		let barcodeByteList = utf8Encode.encode(decodedResult.decodedText);
@@ -84,6 +82,7 @@
 			rememberLastUsedCamera: true,
 			showTorchButtonIfSupported: true,
 			showZoomSliderIfSupported: true,
+            //TODO: Закончить функционал
 			debugMode: true
 		},
 		/* verbose= */ false);

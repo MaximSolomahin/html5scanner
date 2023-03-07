@@ -265,7 +265,7 @@ export class Html5Qrcode {
 
     private shouldScan: boolean;
 
-    private debugMode: boolean | null = null ;
+    private debugMode: boolean | null = null;
 
     // Nullable elements
     // TODO(mebjas): Reduce the state-fulness of this mammoth class, by splitting
@@ -1197,18 +1197,20 @@ export class Html5Qrcode {
         //do not chaqnge this image, make a copy [...currentImage]
         const currentImage = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
 
-        this.showImageForTest('mainPicture');
+        //this.showImageForTest('mainPicture');
 
         // Try scanning normal frame and in case of failure, scan
         // the inverted context if not explictly disabled.
         // TODO(mebjas): Move this logic to decoding library.
         try {
+            this.grayFilter();
+
             let result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             if (!result) {
                 //invert
                 this.invertImage();
 
-                this.showImageForTest('invertPicture');
+                //this.showImageForTest('invertPicture');
 
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             }
@@ -1218,7 +1220,7 @@ export class Html5Qrcode {
 
                 this.resize(videoElement);
 
-                this.showImageForTest('resizePicture');
+                //this.showImageForTest('resizePicture');
 
 
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
@@ -1227,11 +1229,12 @@ export class Html5Qrcode {
                 //invert resized context
                 this.invertImage();
 
-                this.showImageForTest("invertResizePicture");
+                //this.showImageForTest("invertResizePicture");
 
                 result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
             }
-        } catch(error) {
+
+        } catch (error) {
             this.logger.logError(
                 "Error happend while scanning context", error);
         }
@@ -1247,10 +1250,14 @@ export class Html5Qrcode {
         this.context!.putImageData(imgData, 0, 0);
     }
 
-    private resize(video : HTMLVideoElement) {
-        const sX = video.videoWidth / 4 + this.qrRegion!.width / 2;
-        const sY = video.videoHeight / 4 + this.qrRegion!.height / 2;
-        this.context!.translate(-sX , -sY);
+    private grayFilter() {
+        this.context!.filter = 'grayscale(1)';
+    }
+
+    private resize(video: HTMLVideoElement) {
+        const sX = (video.videoWidth * 2 - this.qrRegion!.width) / 4;
+        const sY = (video.videoHeight * 2 - this.qrRegion!.height) / 4;
+        this.context!.clearRect(0, 0, this.qrRegion!.width, this.qrRegion!.height);
 
         this.context?.drawImage(video,
             sX,
@@ -1268,38 +1275,37 @@ export class Html5Qrcode {
 
     //You should use showImageForTest for show picture in div with id 'results'
     private showImageForTest(variant: string) {
+        //
+        //     TODO: Переделать на входящую переменную DebugMode
 
-        //TODO: Переделать на аходящую глобальную переменную
-        if (true) {
-            let mainContainer = document.getElementById('resultsMain');
-            let zoomContainer = document.getElementById('resultsZoom');
-            let invertContainer = document.getElementById('resultsInvert');
-            let zoomInvertContainer = document.getElementById('resultsZoomInvert');
+        let mainContainer = document.getElementById('resultsMain');
+        let zoomContainer = document.getElementById('resultsZoom');
+        let invertContainer = document.getElementById('resultsInvert');
+        let zoomInvertContainer = document.getElementById('resultsZoomInvert');
 
-            switch (variant) {
-                case 'mainPicture':
-                    mainContainer!.innerHTML = '';
-                    mainContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
-                    break
-                case 'resizePicture':
-                    zoomContainer!.innerHTML = '';
-                    zoomContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
-                    break
-                case 'invertPicture':
-                    invertContainer!.innerHTML = '';
-                    invertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
-                    break
-                case 'invertResizePicture':
-                    zoomInvertContainer!.innerHTML = '';
-                    zoomInvertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
-                    break
-            }
+        switch (variant) {
+            case 'mainPicture':
+                mainContainer!.innerHTML = '';
+                mainContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                break
+            case 'resizePicture':
+                zoomContainer!.innerHTML = '';
+                zoomContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                break
+            case 'invertPicture':
+                invertContainer!.innerHTML = '';
+                invertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                break
+            case 'invertResizePicture':
+                zoomInvertContainer!.innerHTML = '';
+                zoomInvertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                break
         }
 
     }
 
     //Helper method for showImageForTest
-    private imageDataToImage(imageData : ImageData) {
+    private imageDataToImage(imageData: ImageData) {
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         canvas.width = imageData.width;
