@@ -1155,6 +1155,33 @@ export class Html5Qrcode {
             });
     }
 
+    private async scanContextForFailedScan(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback,
+        copyCanvas: HTMLCanvasElement
+    ): Promise<boolean> {
+        if (this.stateManagerProxy.isPaused()) {
+            return Promise.resolve(false);
+        }
+
+        return this.qrcode.decodeAsync(copyCanvas)
+            .then((result) => {
+                qrCodeSuccessCallback(
+                    result.text,
+                    Html5QrcodeResultFactory.createFromQrcodeResult(
+                        result));
+                this.possiblyUpdateShaders(/* qrMatch= */ true);
+                return true;
+            }).catch((error) => {
+                this.possiblyUpdateShaders(/* qrMatch= */ false);
+                let errorMessage = Html5QrcodeStrings.codeParseError(error);
+                qrCodeErrorCallback(
+                    errorMessage, Html5QrcodeErrorFactory.createFrom(errorMessage));
+
+                return false;
+            });
+    }
+
     /**
      * Forever scanning method.
      */
@@ -1194,45 +1221,80 @@ export class Html5Qrcode {
             /* dWidth= */ this.qrRegion.width,
             /* dHeight= */ this.qrRegion.height);
 
-        //do not chaqnge this image, make a copy [...currentImage]
+        this.context!.filter = 'grayscale(1)';
+
+        //do not change this image, make a copy [...currentImage]
         const currentImage = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
 
-        //this.showImageForTest('mainPicture');
 
-        // Try scanning normal frame and in case of failure, scan
-        // the inverted context if not explictly disabled.
-        // TODO(mebjas): Move this logic to decoding library.
+        let shadowCanvas: HTMLCanvasElement = document.createElement('canvas');
+
+        let ctx = shadowCanvas.getContext('2d');
+        shadowCanvas.width = currentImage.width;
+        shadowCanvas.height = currentImage.height;
+        ctx!.putImageData(currentImage, 0, 0);
+
         try {
-            this.grayFilter();
+            const normalSizePictureScan = new Promise( async () => {
+                //Обычная
+                //this.showImageForTest('mainPicture', ctx!);
+                return await this.scanContextForFailedScan(qrCodeSuccessCallback, qrCodeErrorCallback, shadowCanvas)
+                    .then(result => {
+                        if (!result) {
+                            new Promise(async () => {
+                                //Обычная инвертированная
+                                let shadowCanvas: HTMLCanvasElement = document.createElement('canvas');
 
-            let result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            if (!result) {
-                //invert
-                this.invertImage();
+                                let ctx = shadowCanvas.getContext('2d');
+                                shadowCanvas.width = currentImage.width;
+                                shadowCanvas.height = currentImage.height;
+                                ctx!.putImageData(
+                                    this.invertImage(
+                                        this.copyImageData(ctx!, currentImage)),
+                                    0,
+                                    0
+                                );
 
-                //this.showImageForTest('invertPicture');
+                                //this.showImageForTest('invertPicture', ctx!);
+                                return await this.scanContextForFailedScan(
+                                    qrCodeSuccessCallback,
+                                    qrCodeErrorCallback,
+                                    shadowCanvas
+                                );
+                            })
+                        }
+                    });
+            })
 
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            }
-            if (!result) {
-                //resize
-                this.context!.putImageData(currentImage, 0, 0);
+            const bigSizePictureScan = new Promise( async () => {
+                //Обычная увеличеная
+                this.resizeMain(videoElement);
 
-                this.resize(videoElement);
+                //this.showImageForTest('resizePicture', this.context!);
+                return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+                    .then(result => {
+                        if (!result) {
+                            new Promise( async () => {
+                                //Обычная увеличеная и инвертированная
+                                this.context!.putImageData(
+                                    this.invertImage(
+                                        this.context!.getImageData(
+                                            0,
+                                            0,
+                                            this.qrRegion!.width,
+                                            this.qrRegion!.height
+                                        )
+                                    ), 0, 0);
 
-                //this.showImageForTest('resizePicture');
+                                //this.showImageForTest("invertResizePicture", this.context!);
+                                await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback);
+                            })
+                        }
+                    })
+            })
 
-
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            }
-            if (!result) {
-                //invert resized context
-                this.invertImage();
-
-                //this.showImageForTest("invertResizePicture");
-
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            }
+            Promise.race([normalSizePictureScan, bigSizePictureScan])
+                .then(value => console.log(value));
 
         } catch (error) {
             this.logger.logError(
@@ -1240,21 +1302,24 @@ export class Html5Qrcode {
         }
     }
 
-    private invertImage() {
-        //todo invert
-        const imgData = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height);
-        let data = imgData.data;
+
+    private invertImage(imageData: ImageData) : ImageData {
+        let data = imageData.data;
         for (let i = 0; i < data.length; i += (i % 4 === 2 ? 2 : 1)) {
             data[i] = 255 - data[i];
         }
-        this.context!.putImageData(imgData, 0, 0);
+
+        return imageData;
     }
 
-    private grayFilter() {
-        this.context!.filter = 'grayscale(1)';
+    private copyImageData(ctx : CanvasRenderingContext2D, src: ImageData) : ImageData {
+        let newImageData = ctx.createImageData(src.width, src.height);
+        newImageData.data.set(src.data);
+
+        return newImageData;
     }
 
-    private resize(video: HTMLVideoElement) {
+    private resizeMain(video: HTMLVideoElement) {
         const sX = (video.videoWidth * 2 - this.qrRegion!.width) / 4;
         const sY = (video.videoHeight * 2 - this.qrRegion!.height) / 4;
         this.context!.clearRect(0, 0, this.qrRegion!.width, this.qrRegion!.height);
@@ -1273,8 +1338,10 @@ export class Html5Qrcode {
     }
 
 
+
     //You should use showImageForTest for show picture in div with id 'results'
-    private showImageForTest(variant: string) {
+    // private showImageForTest(variant: string) {
+    private showImageForTest(variant: string, context: CanvasRenderingContext2D) {
         //
         //     TODO: Переделать на входящую переменную DebugMode
 
@@ -1286,19 +1353,19 @@ export class Html5Qrcode {
         switch (variant) {
             case 'mainPicture':
                 mainContainer!.innerHTML = '';
-                mainContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                mainContainer!.appendChild(this.imageDataToImage(context.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
                 break
             case 'resizePicture':
                 zoomContainer!.innerHTML = '';
-                zoomContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                zoomContainer!.appendChild(this.imageDataToImage(context.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
                 break
             case 'invertPicture':
                 invertContainer!.innerHTML = '';
-                invertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                invertContainer!.appendChild(this.imageDataToImage(context.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
                 break
             case 'invertResizePicture':
                 zoomInvertContainer!.innerHTML = '';
-                zoomInvertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+                zoomInvertContainer!.appendChild(this.imageDataToImage(context.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
                 break
         }
 
