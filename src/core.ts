@@ -183,6 +183,7 @@ export interface QrcodeResult {
 export interface Html5QrcodeResult {
     decodedText: string;
     result: QrcodeResult;
+    scanType?: string
 }
 
 /**
@@ -200,11 +201,12 @@ export class Html5QrcodeResultFactory {
         };
     }
 
-    static createFromQrcodeResult(qrcodeResult: QrcodeResult)
+    static createFromQrcodeResult(qrcodeResult: QrcodeResult, scanType?: string)
         : Html5QrcodeResult {
         return {
             decodedText: qrcodeResult.text,
-            result: qrcodeResult
+            result: qrcodeResult,
+            scanType: scanType
         };
     }
 }
