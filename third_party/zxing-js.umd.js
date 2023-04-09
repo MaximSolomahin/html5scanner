@@ -9935,7 +9935,6 @@
             }
         }
         catch (e) {
-            console.log(e);
             throw new IllegalStateException('unknown decoder: ' + information);
         }
     }
@@ -10057,7 +10056,7 @@
             catch (e) {
                 // OK
                 if (this.verbose) {
-                    console.log(e);
+                    // console.log(e);
                 }
             }
             this.pairs.length = 0;
@@ -10133,7 +10132,7 @@
             catch (e) {
                 // OK
                 if (this.verbose) {
-                    console.log(e);
+                    // console.log(e);
                 }
             }
             if (reverse) {
@@ -10167,7 +10166,7 @@
                 catch (e) {
                     // We failed, try the next candidate
                     if (this.verbose) {
-                        console.log(e);
+                        // console.log(e);
                     }
                 }
             }
@@ -10364,7 +10363,7 @@
             catch (e) {
                 rightChar = null;
                 if (this.verbose) {
-                    console.log(e);
+                    // console.log(e);
                 }
             }
             return new ExpandedPair(leftChar, rightChar, pattern, true);

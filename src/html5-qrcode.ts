@@ -265,8 +265,6 @@ export class Html5Qrcode {
 
     private shouldScan: boolean;
 
-    private debugMode: boolean | null = null;
-
     // Nullable elements
     // TODO(mebjas): Reduce the state-fulness of this mammoth class, by splitting
     // into independent classes for better separation of concerns and reducing
@@ -289,6 +287,8 @@ export class Html5Qrcode {
 
     // TODO(mebjas): deprecate this.
     public isScanning: boolean = false;
+
+    private scanVariant: string = 'main';
 
     /**
      * Initialize the code scanner.
@@ -1100,6 +1100,8 @@ export class Html5Qrcode {
         }
 
         this.createScannerPausedUiElement(this.element!);
+        context!.filter = 'grayscale(1)';
+        context!.imageSmoothingEnabled = false;
 
         // Update local states
         this.qrRegion = qrRegion;
@@ -1194,111 +1196,213 @@ export class Html5Qrcode {
             /* dWidth= */ this.qrRegion.width,
             /* dHeight= */ this.qrRegion.height);
 
-        //do not chaqnge this image, make a copy [...currentImage]
-        const currentImage = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+        return  this.runScanning(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
 
-        //this.showImageForTest('mainPicture');
-
-        // Try scanning normal frame and in case of failure, scan
-        // the inverted context if not explictly disabled.
-        // TODO(mebjas): Move this logic to decoding library.
-        try {
-            this.grayFilter();
-
-            let result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            if (!result) {
-                //invert
-                this.invertImage();
-
-                //this.showImageForTest('invertPicture');
-
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    private async runScanning(qrCodeSuccessCallback: QrcodeSuccessCallback,
+                             qrCodeErrorCallback: QrcodeErrorCallback) {
+        switch (this.scanVariant) {
+            case 'main': {
+                return await this.mainScan(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
-            if (!result) {
-                //resize
-                this.context!.putImageData(currentImage, 0, 0);
-
-                this.resize(videoElement);
-
-                //this.showImageForTest('resizePicture');
-
-
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+            case 'zoomX2': {
+                return await this.zoomScanX2(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
-            if (!result) {
-                //invert resized context
-                this.invertImage();
-
-                //this.showImageForTest("invertResizePicture");
-
-                result = await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+            case 'zoomX3': {
+                return await this.zoomScanX3(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
-
-        } catch (error) {
-            this.logger.logError(
-                "Error happend while scanning context", error);
+            case 'invert': {
+                return await this.invertScan(qrCodeSuccessCallback, qrCodeErrorCallback);
+            }
+            case 'invertZoomX2': {
+                return await this.zoomInvertX2(qrCodeSuccessCallback, qrCodeErrorCallback);
+            }
+            case 'invertZoomX3': {
+                return await this.zoomInvertX3(qrCodeSuccessCallback, qrCodeErrorCallback);
+            }
+            default: {
+                return await this.mainScan(qrCodeSuccessCallback, qrCodeErrorCallback);
+            }
         }
     }
 
-    private invertImage() {
-        //todo invert
-        const imgData = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height);
-        let data = imgData.data;
+    private async mainScan(qrCodeSuccessCallback: QrcodeSuccessCallback,
+                           qrCodeErrorCallback: QrcodeErrorCallback) {
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'zoomX2';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private async invertScan(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback) {
+        const currentImage = this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+        this.context!.putImageData(this.invertImage(currentImage), 0, 0);
+
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'invertZoomX2';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private async zoomScanX2(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback) {
+        const currentImageForZoom = this.context!.getImageData(
+            this.qrRegion!.width / 4, this.qrRegion!.height / 4, this.qrRegion!.width, this.qrRegion!.height
+        )
+        this.context!.putImageData(await this.scaleImageData(currentImageForZoom, 2), 0, 0);
+
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'zoomX3';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private async zoomScanX3(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback) {
+        const currentImageForZoom = this.context!.getImageData(
+            this.qrRegion!.width / 3, this.qrRegion!.height / 3, this.qrRegion!.width, this.qrRegion!.height
+        )
+        this.context!.putImageData(await this.scaleImageData(currentImageForZoom, 3), 0, 0);
+
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'invert';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private async zoomInvertX2(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback) {
+        const currentImageForZoom = this.context!.getImageData(
+            this.qrRegion!.width / 4, this.qrRegion!.height / 4, this.qrRegion!.width, this.qrRegion!.height
+        )
+        this.context!.putImageData(await this.scaleImageData(currentImageForZoom, 2), 0, 0);
+
+        this.context!.putImageData(
+            await this.scaleImageData(
+                this.invertImage(currentImageForZoom),
+                2
+            ),
+            0,
+            0
+        );
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'invertZoomX3';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private async zoomInvertX3(
+        qrCodeSuccessCallback: QrcodeSuccessCallback,
+        qrCodeErrorCallback: QrcodeErrorCallback) {
+        const currentImageForZoom = this.context!.getImageData(
+            this.qrRegion!.width / 3, this.qrRegion!.height / 3, this.qrRegion!.width, this.qrRegion!.height
+        )
+        this.context!.putImageData(await this.scaleImageData(this.invertImage(currentImageForZoom), 3), 0, 0);
+
+        this.showImageForTest(this.scanVariant);
+        this.scanVariant = 'main';
+
+        return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
+    }
+
+    private invertImage(image: ImageData) {
+        let data = image.data;
         for (let i = 0; i < data.length; i += (i % 4 === 2 ? 2 : 1)) {
             data[i] = 255 - data[i];
         }
-        this.context!.putImageData(imgData, 0, 0);
+
+        return image;
     }
 
-    private grayFilter() {
-        this.context!.filter = 'grayscale(1)';
+    private async scaleImageData(imageData: ImageData, scale: number) {
+        let scaled = this.context!.createImageData(imageData.width * scale, imageData.height * scale);
+        let subLine = this.context!.createImageData(scale, 1).data
+
+        for (let row = 0; row < imageData.height; row++) {
+            for (let col = 0; col < imageData.width; col++) {
+                let sourcePixel = imageData.data.subarray(
+                    (row * imageData.width + col) * 4,
+                    (row * imageData.width + col) * 4 + 4
+                );
+                for (let x = 0; x < scale; x++) subLine.set(sourcePixel, x * 4)
+                for (let y = 0; y < scale; y++) {
+                    let destRow = row * scale + y;
+                    let destCol = col * scale;
+                    scaled.data.set(subLine, (destRow * scaled.width + destCol) * 4)
+                }
+            }
+        }
+
+        return scaled;
     }
 
-    private resize(video: HTMLVideoElement) {
-        const sX = (video.videoWidth * 2 - this.qrRegion!.width) / 4;
-        const sY = (video.videoHeight * 2 - this.qrRegion!.height) / 4;
-        this.context!.clearRect(0, 0, this.qrRegion!.width, this.qrRegion!.height);
-
-        this.context?.drawImage(video,
-            sX,
-            sY,
-            this.qrRegion!.width / 2,
-            this.qrRegion!.height / 2,
-            0,
-            0,
-            this.qrRegion!.width,
-            this.qrRegion!.height);
-
-        this.context!.resetTransform();
-    }
-
-
-    //You should use showImageForTest for show picture in div with id 'results'
     private showImageForTest(variant: string) {
-        //
-        //     TODO: Переделать на входящую переменную DebugMode
+        if (!this.verbose) {
+            return;
+        }
 
-        let mainContainer = document.getElementById('resultsMain');
-        let zoomContainer = document.getElementById('resultsZoom');
-        let invertContainer = document.getElementById('resultsInvert');
-        let zoomInvertContainer = document.getElementById('resultsZoomInvert');
+        let mainContainer = document.getElementById('main');
+        let zoomX2Container = document.getElementById('zoomX2');
+        let zoomX3Container = document.getElementById('zoomX3');
+        let invertContainer = document.getElementById('invert');
+        let zoomX2InvertContainer = document.getElementById('invertX2');
+        let zoomX3InvertContainer = document.getElementById('invertX3');
+
 
         switch (variant) {
-            case 'mainPicture':
-                mainContainer!.innerHTML = '';
-                mainContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+            case 'main':
+                if (mainContainer) {
+                    mainContainer!.innerHTML = '';
+                    mainContainer!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+
+                }
                 break
-            case 'resizePicture':
-                zoomContainer!.innerHTML = '';
-                zoomContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+            case 'zoomX2':
+                if (zoomX2Container) {
+                    zoomX2Container!.innerHTML = '';
+                    zoomX2Container!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+                }
                 break
-            case 'invertPicture':
-                invertContainer!.innerHTML = '';
-                invertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+            case 'zoomX3':
+                if (zoomX3Container) {
+                    zoomX3Container!.innerHTML = '';
+                    zoomX3Container!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+                }
                 break
-            case 'invertResizePicture':
-                zoomInvertContainer!.innerHTML = '';
-                zoomInvertContainer!.appendChild(this.imageDataToImage(this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)));
+            case 'invert':
+                if (invertContainer) {
+                    invertContainer!.innerHTML = '';
+                    invertContainer!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+                }
+                break
+            case 'invertZoomX2':
+                if (zoomX2InvertContainer) {
+                    zoomX2InvertContainer!.innerHTML = '';
+                    zoomX2InvertContainer!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+                }
+                break
+            case 'invertZoomX3':
+                if (zoomX3InvertContainer) {
+                    zoomX3InvertContainer!.innerHTML = '';
+                    zoomX3InvertContainer!.appendChild(this.imageDataToImage(
+                        this.context!.getImageData(0, 0, this.qrRegion!.width, this.qrRegion!.height)
+                    ));
+                }
                 break
         }
 
