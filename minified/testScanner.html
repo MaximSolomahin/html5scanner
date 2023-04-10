@@ -18,16 +18,22 @@
         </div>
     </div>
     <div class="child">
-        <div id="resultsMain">
+        <div id="main">
             <p1>Обычный снимок</p1>
         </div>
-        <div id="resultsZoom">
+        <div id="zoomX2">
             <p1>Zoom</p1>
         </div>
-        <div id="resultsInvert">
+        <div id="zoomX3">
             <p1>Invert</p1>
         </div>
-        <div id="resultsZoomInvert">
+        <div id="invert">
+            <p1>Zoom Invert</p1>
+        </div>
+        <div id="invertX2">
+            <p1>Zoom Invert</p1>
+        </div>
+        <div id="invertX3">
             <p1>Zoom Invert</p1>
         </div>
     </div>
@@ -71,10 +77,44 @@
 		//console.warn(`Code scan error = ${error}`);
 	}
 
+
+	/*
+    Code types
+
+    enum Html5QrcodeSupportedFormats {
+      QR_CODE = 0,
+      AZTEC,
+      CODABAR,
+      CODE_39,
+      CODE_93,
+      CODE_128,
+      DATA_MATRIX,
+      MAXICODE,
+      ITF,
+      EAN_13,
+      EAN_8,
+      PDF_417,
+      RSS_14,
+      RSS_EXPANDED,
+      UPC_A,
+      UPC_E,
+      UPC_EAN_EXTENSION,
+    }
+ */
+
+	const formatsToSupport = [
+		Html5QrcodeSupportedFormats.QR_CODE,
+		Html5QrcodeSupportedFormats.DATA_MATRIX,
+		Html5QrcodeSupportedFormats.CODE_128,
+		Html5QrcodeSupportedFormats.EAN_13,
+		Html5QrcodeSupportedFormats.CODE_39,
+		Html5QrcodeSupportedFormats.EAN_8,
+	];
+
 	let html5QrcodeScanner = new Html5QrcodeScanner(
 		"reader",
 		{
-			fps: 2,
+			fps: 30,
 			qrbox: {width: 250, height: 250},
 			experimentalFeatures: {
 				useBarCodeDetectorIfSupported: true
@@ -82,10 +122,9 @@
 			rememberLastUsedCamera: true,
 			showTorchButtonIfSupported: true,
 			showZoomSliderIfSupported: true,
-            //TODO: Закончить функционал
-			debugMode: true
+			//formatsToSupport: formatsToSupport
 		},
-		/* verbose= */ false);
+		/* verbose=  Turn on it when will you want to show time for read 100 pictures and watch camera examples*/ true);
 	html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 </script>
 </body>
