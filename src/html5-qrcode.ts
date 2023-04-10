@@ -1209,18 +1209,18 @@ export class Html5Qrcode {
             case 'zoomX2': {
                 return await this.zoomScanX2(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
-            case 'zoomX3': {
-                return await this.zoomScanX3(qrCodeSuccessCallback, qrCodeErrorCallback);
-            }
+            // case 'zoomX3': {
+            //     return await this.zoomScanX3(qrCodeSuccessCallback, qrCodeErrorCallback);
+            // }
             case 'invert': {
                 return await this.invertScan(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
             case 'invertZoomX2': {
                 return await this.zoomInvertX2(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
-            case 'invertZoomX3': {
-                return await this.zoomInvertX3(qrCodeSuccessCallback, qrCodeErrorCallback);
-            }
+            // case 'invertZoomX3': {
+            //     return await this.zoomInvertX3(qrCodeSuccessCallback, qrCodeErrorCallback);
+            // }
             default: {
                 return await this.mainScan(qrCodeSuccessCallback, qrCodeErrorCallback);
             }
@@ -1258,7 +1258,7 @@ export class Html5Qrcode {
         this.showImageForTest(this.scanVariant);
 
         return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            .finally(() => this.scanVariant = 'zoomX3')
+            .finally(() => this.scanVariant = 'invert')
     }
 
     private async zoomScanX3(
@@ -1294,7 +1294,7 @@ export class Html5Qrcode {
         this.showImageForTest(this.scanVariant);
 
         return await this.scanContext(qrCodeSuccessCallback, qrCodeErrorCallback)
-            .finally(() => this.scanVariant = 'invertZoomX3')
+            .finally(() => this.scanVariant = 'main')
     }
 
     private async zoomInvertX3(
