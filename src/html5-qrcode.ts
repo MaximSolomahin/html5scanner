@@ -1101,7 +1101,6 @@ export class Html5Qrcode {
 
         this.createScannerPausedUiElement(this.element!);
         context!.filter = 'grayscale(1)';
-        context!.imageSmoothingEnabled = false;
 
         // Update local states
         this.qrRegion = qrRegion;
