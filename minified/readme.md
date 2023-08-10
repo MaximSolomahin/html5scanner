@@ -69,9 +69,9 @@
     	html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
 5. Определить 2 callback функции:
-     Пример: 
+     Пример:
 
-   function onScanSuccess(decodedText, decodedResult) {
+      function onScanSuccess(decodedText, decodedResult) {
         // handle the scanned code as you like, for example:
         console.log(`Code matched = ${decodedText}`, decodedResult);
    }
@@ -82,5 +82,5 @@
     		//console.warn(`Code scan error = ${error}`);
    }
 
- Реализацию можно посмотреть в файле: html5scanner/minified/testScanner.html
+ # Реализацию можно посмотреть в файле: html5scanner/minified/testScanner.html
 
