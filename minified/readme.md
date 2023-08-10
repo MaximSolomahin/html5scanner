@@ -16,6 +16,7 @@
 3.  (Опционально) Выбрать формат кодов, которые необходимо будет сканировать.
 
 Пример:
+
     /*
        enum Html5QrcodeSupportedFormats {
           QR_CODE = 0,
@@ -46,6 +47,7 @@
     		Html5QrcodeSupportedFormats.CODE_39,
     		Html5QrcodeSupportedFormats.EAN_8,
     	];
+     
 
 4. Создать экземпляр класса. 
      Пример:
@@ -68,16 +70,17 @@
 
 5. Определить 2 callback функции:
      Пример: 
-      function onScanSuccess(decodedText, decodedResult) {
+
+   function onScanSuccess(decodedText, decodedResult) {
         // handle the scanned code as you like, for example:
         console.log(`Code matched = ${decodedText}`, decodedResult);
-      }
+   }
     
-    	function onScanFailure(error) {
+   function onScanFailure(error) {
     		// handle scan failure, usually better to ignore and keep scanning.
     		// for example:
     		//console.warn(`Code scan error = ${error}`);
-    	}
+   }
 
  Реализацию можно посмотреть в файле: html5scanner/minified/testScanner.html
 
