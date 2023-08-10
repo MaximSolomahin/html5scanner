@@ -1,29 +1,81 @@
-# Generated code, do not modify manually.
+# О проекте
+Данная версия сканера, базируется на html5-qrcode. Исходники можно посмотреть по ссылке https://github.com/mebjas/html5-qrcode
 
--   All files in this directory are minified from source code in the project hosted at [src](../src).
--   Generated files should be supported in all major browsers.
+Доработки для PMI: 
+  1. Увеличение масштаба сканирования.
+  2. Добавление инвертирования.
+  3. Добавление увеличение масштаба инвертированной картинки.
+Данное решение помогло при сканировании Datamatrix с пачек стиков и блоков
 
-## [deprecation notice]
-Its not recommended to use the minified script from this directory directly. These contain the script based on top of the tree and may not have been tested for production.
+#Как использовать: 
+1. Скачать html5-qrcode.min.js
+2. Подключить минификатор в свой JS файл
+   ![image](https://github.com/MaximSolomahin/html5scanner/assets/80065451/2ab06cdb-21cf-4ae2-9ca3-1a75719f931e)
+3.  (Опционально) Выбрать формат кодов, которые необходимо будет сканировать.
 
-### Recommended ways to use
-#### Using directly in browser without any loader
-If you are not using any loader, you can get the latest UMD javascript code in production from [https://unpkg.com/html5-qrcode](https://unpkg.com/html5-qrcode).
+Пример:
+    /*
+       enum Html5QrcodeSupportedFormats {
+          QR_CODE = 0,
+          AZTEC,
+          CODABAR,
+          CODE_39,
+          CODE_93,
+          CODE_128,
+          DATA_MATRIX,
+          MAXICODE,
+          ITF,
+          EAN_13,
+          EAN_8,
+          PDF_417,
+          RSS_14,
+          RSS_EXPANDED,
+          UPC_A,
+          UPC_E,
+          UPC_EAN_EXTENSION,
+        }
+    */
+    
+    	const formatsToSupport = [
+    		Html5QrcodeSupportedFormats.QR_CODE,
+    		Html5QrcodeSupportedFormats.DATA_MATRIX,
+    		Html5QrcodeSupportedFormats.CODE_128,
+    		Html5QrcodeSupportedFormats.EAN_13,
+    		Html5QrcodeSupportedFormats.CODE_39,
+    		Html5QrcodeSupportedFormats.EAN_8,
+    	];
 
-```js
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript">
-```
+4. Создать экземпляр класса. 
+     Пример:
 
-> In case you installed the plugin using npm but still use javascript without any module loader, you can get the minified script in node_modules/html5-qrcode/html5-qrcode.min.js
+     let html5QrcodeScanner = new Html5QrcodeScanner(
+    		"reader",
+    		{
+    			fps: 30,
+    			qrbox: {width: 250, height: 250},
+    			experimentalFeatures: {
+    				useBarCodeDetectorIfSupported: true
+    			},
+    			rememberLastUsedCamera: true,
+    			showTorchButtonIfSupported: true,
+    			showZoomSliderIfSupported: true,
+    			//formatsToSupport: formatsToSupport
+    		},
+    		/* verbose=  Turn on it when will you want to show time for read 100 pictures and watch camera examples*/ true);
+    	html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
-#### Using with module loaders
-Include the script with
-```js
-// To use Html5QrcodeScanner
-import {Html5QrcodeScanner} from "html5-qrcode"
+5. Определить 2 callback функции:
+     Пример: 
+      function onScanSuccess(decodedText, decodedResult) {
+        // handle the scanned code as you like, for example:
+        console.log(`Code matched = ${decodedText}`, decodedResult);
+      }
+    
+    	function onScanFailure(error) {
+    		// handle scan failure, usually better to ignore and keep scanning.
+    		// for example:
+    		//console.warn(`Code scan error = ${error}`);
+    	}
 
-// To use Html5Qrcode
-import {Html5Qrcode} from "html5-qrcode"
-```
+ Реализацию можно посмотреть в файле: html5scanner/minified/testScanner.html
 
-**./minified/ scripts will be deprecated by 01/01/2022**
